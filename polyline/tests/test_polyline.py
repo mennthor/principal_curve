@@ -1,5 +1,6 @@
 from polyline import Polyline
 
+import numpy as np
 from pytest import approx, raises
 from math import sqrt, pi
 
@@ -400,12 +401,95 @@ class TestPolylineAngle():
         v = [[0, 0], [1, 1], [2, 2], [2, 3], [1, 3], [2, 4], [1, 3]]
         pl = Polyline(v)
 
-        angles = [pl.get_angle_at_vertex(i) / pi * 180.
+        angles = [pl.get_angle_at_vertex(i)[0] / pi * 180.
                   for i in range(1, pl.nsegments)]
         angles_exp = [180., 135., 90., 45., 0.]
 
         for ang, ang_exp in zip(angles, angles_exp):
             print(ang, ang_exp)
             assert ang == approx(ang_exp, abs=1e-5)
+
+    def test_angle_gradient_dx(self):
+        # Middle index is moved on a fine grid to test analytical dx components
+        # againt the numerical ones from finite differences
+        pl = Polyline([[-1.03, -1.03], [0, 0], [1.03, 1.03]])
+        idx = 1  # Movable vertex id (middle vertex to obtain mutliple angles)
+        test_eps = 1e-2  # Max allowed deviation, chose suitable for num grad
+
+        x_pos = np.linspace(-2, 2, 501)
+        y_pos = [1.5, 0.75, 0.25, 0., -0.25, -0.75, -1.5]
+
+        for yi in y_pos:
+            cos_angles, cos_angles_grad_x = [], []
+            for xi in x_pos:
+                pl.replace_vertex(idx, [xi, yi])
+                cos_ang, cos_ang_grad = pl.get_cos_angle_at_vertex(idx)
+                cos_angles.append(cos_ang)
+                cos_angles_grad_x.append(cos_ang_grad[0])
+
+            cos_angles = np.array(cos_angles)
+            cos_angles_grad_x = np.array(cos_angles_grad_x)
+            num_grad_x = np.gradient(cos_angles, x_pos)
+
+            # Test analytical against numerical gradients
+            assert np.allclose(num_grad_x, cos_angles_grad_x, atol=test_eps)
+
+        return
+
+    def test_angle_gradient_dy(self):
+        # Middle index is moved on a fine grid to test analytical dy components
+        # againt the numerical ones from finite differences
+        pl = Polyline([[-1.03, -1.03], [0, 0], [1.03, 1.03]])
+        idx = 1  # Movable vertex id (middle vertex to obtain mutliple angles)
+        test_eps = 1e-2  # Max allowed deviation, chose suitable for num grad
+
+        x_pos = [1.5, 0.75, 0.25, 0., -0.25, -0.75, -1.5]
+        y_pos = np.linspace(-2, 2, 501)
+
+        for xi in x_pos:
+            cos_angles, cos_angles_grad_y = [], []
+            for yi in y_pos:
+                pl.replace_vertex(idx, [xi, yi])
+                cos_ang, cos_ang_grad = pl.get_cos_angle_at_vertex(idx)
+                cos_angles.append(cos_ang)
+                cos_angles_grad_y.append(cos_ang_grad[1])
+
+            cos_angles = np.array(cos_angles)
+            cos_angles_grad_y = np.array(cos_angles_grad_y)
+            num_grad_y = np.gradient(cos_angles, y_pos)
+
+            # Test analytical against numerical gradients
+            assert np.allclose(num_grad_y, cos_angles_grad_y, atol=test_eps)
+
+        return
+
+    def test_angle_gradient_diag(self):
+        # Middle index is moved on a fine grid to test analytical dx, dy
+        # components againt the numerical ones from finite differences
+        pl = Polyline([[-1.03, -1.03], [0, 0], [1.03, 1.03]])
+        idx = 1  # Movable vertex id (middle vertex to obtain mutliple angles)
+        test_eps = 1e-2  # Max allowed deviation, chose suitable for num grad
+
+        # Test on a diagonal between fixed vertices
+        x_pos = np.linspace(-2, 2, 501)
+
+        cos_angles, cos_angles_grad_x, cos_angles_grad_y = [], [], []
+        for xi in x_pos:
+            pl.replace_vertex(idx, [xi, -xi])
+            cos_ang, cos_ang_grad = pl.get_cos_angle_at_vertex(idx)
+            cos_angles.append(cos_ang)
+            cos_angles_grad_x.append(cos_ang_grad[0])
+            cos_angles_grad_y.append(cos_ang_grad[1])
+
+        cos_angles = np.array(cos_angles)
+        cos_angles_grad_x = np.array(cos_angles_grad_x)
+        cos_angles_grad_y = np.array(cos_angles_grad_y)
+        cos_angles_grad = cos_angles_grad_x / np.sqrt(2) - cos_angles_grad_y / np.sqrt(2)
+        num_grad = np.gradient(cos_angles, np.diff(x_pos)[0] * np.sqrt(2))
+
+        # Test analytical against numerical gradients
+        assert np.allclose(num_grad, cos_angles_grad, atol=test_eps)
+
+        return
 # </Test polyline: Angle>
 # #############################################################################
