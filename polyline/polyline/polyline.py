@@ -82,6 +82,9 @@ class Polyline(object):
         except Exception:
             raise ValueError(
                 "Only a single vertex can be removed, not a range.")
+        if isinstance(idx, np.ndarray):
+            raise ValueError(
+                "Only a single vertex can be removed, not a range.")
 
         if idx < 1 or idx > self.nsegments:
             raise ValueError("idx must be in (1, nvertices)")
@@ -130,6 +133,10 @@ class Polyline(object):
         except Exception:
             raise ValueError(
                 "Only a single vertex can be removed, not a range.")
+        if isinstance(idx, np.ndarray):
+            raise ValueError(
+                "Only a single vertex can be removed, not a range.")
+
         nvertices_before = self.nvertices
         if idx > nvertices_before or idx < 0:
             raise ValueError("index out of bounds for current polyline.")
@@ -170,6 +177,9 @@ class Polyline(object):
         except Exception:
             raise ValueError(
                 "Only a single vertex can be removed, not a range.")
+        if isinstance(idx, np.ndarray):
+            raise ValueError(
+                "Only a single vertex can be removed, not a range.")
 
         if idx < 1 or idx > self.nsegments:
             raise ValueError("idx must be in (1, nvertices)")
@@ -194,16 +204,18 @@ class Polyline(object):
         except Exception:
             raise ValueError(
                 "Only a single vertex can be removed, not a range.")
+        if isinstance(idx, np.ndarray):
+            raise ValueError(
+                "Only a single vertex can be removed, not a range.")
 
+        nvertices_before = self.nvertices
         self._vertices = np.delete(self._vertices, idx, axis=0)
         if self.nvertices < 2:
             self._clear_segment_lengths()
         else:
             if idx == 0:
-                slen = self._get_segment_lengths(self._vertices[:2])
                 self._segment_lengths = self._segment_lengths[1:]
-            elif idx == self.nvertices - 1:
-                slen = self._get_segment_lengths(self._vertices[-2:])
+            elif idx == nvertices_before - 1:
                 self._segment_lengths = self._segment_lengths[:-1]
             else:
                 slen = self._get_segment_lengths(
@@ -211,13 +223,16 @@ class Polyline(object):
                 self._segment_lengths = np.concatenate((
                         self._segment_lengths[:idx - 1],
                         slen,
-                        self._segment_lengths[idx:]))
+                        self._segment_lengths[idx + 1:]))
 
     def replace_vertex(self, idx, v):
         """ Replace vertex at idx with v """
         try:
             idx + 1
         except Exception:
+            raise ValueError(
+                "Only a single vertex can be removed, not a range.")
+        if isinstance(idx, np.ndarray):
             raise ValueError(
                 "Only a single vertex can be removed, not a range.")
         if idx >= self.nvertices or idx < 0:
@@ -227,7 +242,7 @@ class Polyline(object):
             raise ValueError("Invalid vertex given")
 
         self._vertices[[idx]] = np.atleast_2d(v)
-        if self.nsegments > 1:
+        if self.nsegments > 0:
             if idx == 0:
                 slen = self._get_segment_lengths(self._vertices[:2])
                 self._segment_lengths[0] = slen
@@ -247,13 +262,29 @@ class Polyline(object):
     def get_vertex(self, idx):
         return self._vertices[idx]
 
-    def get_segement_length(self, idx):
+    def get_segment_length(self, idx):
         return self._segment_lengths[idx]
 
-    def get_segement_length_grad(self, idx):
-        # Todo: Calc gradient [dx, dy] for segment length (idx, idx + 1) with
-        #       respect to coordinates x, y of vertex idx
-        return
+    def get_segment_length_grad(self, idx, side="last"):
+        """
+        Returns the gradient [dL/dx, dL/dy] for the segment idx from vertex
+        v_idx to v_(idx+1) with respect to moving one of the vertices.
+        If which is 'first', then the gradient for the first vertex is
+        calcualated, if 'last', then the second vertex is used for the gradient.
+        """
+        if side not in ["first", "last"]:
+            raise ValueError("'side' must be one of 'first', 'last'.")
+
+        # L = sqrt((v1x - v0x)**2 + (v1y - v0y)**2)  for segment (v0->v1)
+        # dL/dx = +(v1x - v0x) / L  for x with respect to v1
+        # dL/dx = -(v1x - v0x) / L  for x with respect to v0
+        L = self.get_segment_length(idx)
+        v0, v1 = self._vertices[idx:idx + 2]
+        dv = v1 - v0
+        if side == "first":
+            dv = -dv  # Gradient changes sign if first vertex is moved
+
+        return dv / L
 
     def clear(self):
         self._clear_vertices()
