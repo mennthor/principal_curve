@@ -1,8 +1,8 @@
 from polyline import Polyline
 
-import numpy as np
 from pytest import approx, raises
 from math import sqrt, pi
+import numpy as np
 
 
 def norm(x0, y0, x1, y1):
@@ -191,7 +191,7 @@ class TestPolylineInsertVertices():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -208,7 +208,7 @@ class TestPolylineInsertVertices():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == approx(vi[0])
             assert pl.vertices[i, 1] == approx(vi[1])
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -225,7 +225,7 @@ class TestPolylineInsertVertices():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -242,7 +242,7 @@ class TestPolylineInsertVertices():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 # </Test polyline: Insert vertices>
@@ -264,7 +264,7 @@ class TestPolylineRemoveVertex():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -280,7 +280,7 @@ class TestPolylineRemoveVertex():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -298,7 +298,26 @@ class TestPolylineRemoveVertex():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
+                assert pl.segment_lengths[i] == approx(norm(
+                    vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+    def test_remove_vertex_middle_2(self):
+        # Same as above, but more than two leftover vertices
+        v = [[1, 3], [3, 5], [6, 2], [2, 2], [3, 3], [4, 4]]
+        pl = Polyline(v)
+        # Order matters
+        pl.remove_vertex(2)
+        pl.remove_vertex(1)
+
+        v_expected = v[:1] + v[3:]
+        assert len(pl.vertices) == pl.nvertices == len(v_expected)
+        assert len(pl.segment_lengths) == pl.nsegments == pl.nvertices - 1
+
+        for i, vi in enumerate(v_expected):
+            assert pl.vertices[i, 0] == vi[0]
+            assert pl.vertices[i, 1] == vi[1]
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 # </Test polyline: Remove vertex>
@@ -308,6 +327,40 @@ class TestPolylineRemoveVertex():
 # #############################################################################
 # <Test polyline: Replace vertex>
 class TestPolylineReplaceVertex():
+    def test_replace_vertex_one_segment(self):
+        v = [[0, 0], [1, 0]]
+        pl = Polyline(v)
+
+        # Test 1: Move first vertex
+        v_repl = [-1, 0]
+        pl.replace_vertex(0, v_repl)
+
+        v_expected = [v_repl] + v[1:]
+        assert len(pl.vertices) == pl.nvertices == len(v_expected)
+        assert len(pl.segment_lengths) == pl.nsegments == pl.nvertices - 1
+
+        for i, vi in enumerate(v_expected):
+            assert pl.vertices[i, 0] == vi[0]
+            assert pl.vertices[i, 1] == vi[1]
+            if i < pl.nsegments:
+                assert pl.segment_lengths[i] == approx(norm(
+                    vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        # Test 2: Move second vertex
+        v_repl_2 = [2, 0]
+        pl.replace_vertex(1, v_repl_2)
+
+        v_expected = [v_repl, v_repl_2]
+        assert len(pl.vertices) == pl.nvertices == len(v_expected)
+        assert len(pl.segment_lengths) == pl.nsegments == pl.nvertices - 1
+
+        for i, vi in enumerate(v_expected):
+            assert pl.vertices[i, 0] == vi[0]
+            assert pl.vertices[i, 1] == vi[1]
+            if i < pl.nsegments:
+                assert pl.segment_lengths[i] == approx(norm(
+                    vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
     def test_replace_vertex_beginning(self):
         v = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
         pl = Polyline(v)
@@ -321,7 +374,7 @@ class TestPolylineReplaceVertex():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -338,7 +391,7 @@ class TestPolylineReplaceVertex():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
@@ -355,7 +408,7 @@ class TestPolylineReplaceVertex():
         for i, vi in enumerate(v_expected):
             assert pl.vertices[i, 0] == vi[0]
             assert pl.vertices[i, 1] == vi[1]
-            if i < pl.nsegments - 1:
+            if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 # </Test polyline: Replace vertex>
@@ -406,7 +459,6 @@ class TestPolylineAngle():
         angles_exp = [180., 135., 90., 45., 0.]
 
         for ang, ang_exp in zip(angles, angles_exp):
-            print(ang, ang_exp)
             assert ang == approx(ang_exp, abs=1e-5)
 
     def test_angle_gradient_dx(self):
@@ -427,11 +479,8 @@ class TestPolylineAngle():
                 cos_angles.append(cos_ang)
                 cos_angles_grad_x.append(cos_ang_grad[0])
 
-            cos_angles = np.array(cos_angles)
-            cos_angles_grad_x = np.array(cos_angles_grad_x)
-            num_grad_x = np.gradient(cos_angles, x_pos)
-
             # Test analytical against numerical gradients
+            num_grad_x = np.gradient(cos_angles, x_pos)
             assert np.allclose(num_grad_x, cos_angles_grad_x, atol=test_eps)
 
         return
@@ -454,11 +503,8 @@ class TestPolylineAngle():
                 cos_angles.append(cos_ang)
                 cos_angles_grad_y.append(cos_ang_grad[1])
 
-            cos_angles = np.array(cos_angles)
-            cos_angles_grad_y = np.array(cos_angles_grad_y)
-            num_grad_y = np.gradient(cos_angles, y_pos)
-
             # Test analytical against numerical gradients
+            num_grad_y = np.gradient(cos_angles, y_pos)
             assert np.allclose(num_grad_y, cos_angles_grad_y, atol=test_eps)
 
         return
@@ -481,15 +527,113 @@ class TestPolylineAngle():
             cos_angles_grad_x.append(cos_ang_grad[0])
             cos_angles_grad_y.append(cos_ang_grad[1])
 
-        cos_angles = np.array(cos_angles)
-        cos_angles_grad_x = np.array(cos_angles_grad_x)
-        cos_angles_grad_y = np.array(cos_angles_grad_y)
-        cos_angles_grad = cos_angles_grad_x / np.sqrt(2) - cos_angles_grad_y / np.sqrt(2)
-        num_grad = np.gradient(cos_angles, np.diff(x_pos)[0] * np.sqrt(2))
-
         # Test analytical against numerical gradients
+        cos_angles_grad = (np.array(cos_angles_grad_x) -
+                           np.array(cos_angles_grad_y)) / sqrt(2)
+        num_grad = np.gradient(cos_angles, np.diff(x_pos)[0] * np.sqrt(2))
         assert np.allclose(num_grad, cos_angles_grad, atol=test_eps)
 
         return
 # </Test polyline: Angle>
+# #############################################################################
+
+
+# #############################################################################
+# <Test polyline: Segment Length>
+class TestPolylineSegmentLength():
+    def test_segment_length(self):
+        # Test values chosen to yield simple lengths
+        v = [[0, 0], [0, 1], [1, 1], [1, 3], [3, 3], [4, 4]]
+        pl = Polyline(v)
+
+        lens = pl.segment_lengths
+        lens_exp = [1., 1., 2., 2., sqrt(2)]
+
+        for li, l_exp in zip(lens, lens_exp):
+            assert li == approx(l_exp, abs=1e-5)
+
+    def test_segment_length_gradient_first(self):
+        test_eps = 1e-2  # Max allowed deviation, chose suitable for num grad
+        idx = 0  # Movable vertex index, here first vertex is tested
+
+        # Test dL/dx
+        pl = Polyline([[0, 0], [1, 0]])
+        x_pos = np.linspace(-2, 2, 501)
+        y_pos = [-1., -0.5, 0.25, 0.5, 1.]  # Don't overlap vertices
+
+        for yi in y_pos:
+            seg_lens, seg_lens_grad_x = [], []
+            for xi in x_pos:
+                pl.replace_vertex(idx, [xi, yi])
+                sl = pl.get_segment_length(0)
+                sl_grad = pl.get_segment_length_grad(0, side="first")
+                seg_lens.append(sl)
+                seg_lens_grad_x.append(sl_grad[0])
+
+            # Test analytical against numerical gradients
+            num_grad_x = np.gradient(seg_lens, x_pos)
+            assert np.allclose(num_grad_x, seg_lens_grad_x, atol=test_eps)
+
+        # Test dL/dy
+        pl = Polyline([[0, 0], [1, 0]])
+        x_pos = [-1.5, -1., -0.5, 0.5, 1.5]  # Don't overlap vertices
+        y_pos = np.linspace(-2, 2, 501)
+
+        for xi in x_pos:
+            seg_lens, seg_lens_grad_y = [], []
+            for yi in y_pos:
+                pl.replace_vertex(idx, [xi, yi])
+                sl = pl.get_segment_length(0)
+                sl_grad = pl.get_segment_length_grad(0, side="first")
+                seg_lens.append(sl)
+                seg_lens_grad_y.append(sl_grad[1])
+
+            # Test analytical against numerical gradients
+            num_grad_y = np.gradient(seg_lens, y_pos)
+            assert np.allclose(num_grad_y, seg_lens_grad_y, atol=test_eps)
+
+        return
+
+    def test_segment_length_gradient_last(self):
+        test_eps = 1e-2  # Max allowed deviation, chose suitable for num grad
+        idx = 1  # Movable vertex index, here second vertex is tested
+
+        # Test dL/dx
+        pl = Polyline([[0, 0], [1, 0]])
+        x_pos = np.linspace(-2, 2, 501)
+        y_pos = [-1., -0.5, 0.25, 0.5, 1.]  # Don't overlap vertices
+
+        for yi in y_pos:
+            seg_lens, seg_lens_grad_x = [], []
+            for xi in x_pos:
+                pl.replace_vertex(idx, [xi, yi])
+                sl = pl.get_segment_length(0)
+                sl_grad = pl.get_segment_length_grad(0, side="last")
+                seg_lens.append(sl)
+                seg_lens_grad_x.append(sl_grad[0])
+
+            # Test analytical against numerical gradients
+            num_grad_x = np.gradient(seg_lens, x_pos)
+            assert np.allclose(num_grad_x, seg_lens_grad_x, atol=test_eps)
+
+        # Test dL/dy
+        pl = Polyline([[0, 0], [1, 0]])
+        x_pos = [-1.5, -1., -0.5, 0.5, 1.5]  # Don't overlap vertices
+        y_pos = np.linspace(-2, 2, 501)
+
+        for xi in x_pos:
+            seg_lens, seg_lens_grad_y = [], []
+            for yi in y_pos:
+                pl.replace_vertex(idx, [xi, yi])
+                sl = pl.get_segment_length(0)
+                sl_grad = pl.get_segment_length_grad(0, side="last")
+                seg_lens.append(sl)
+                seg_lens_grad_y.append(sl_grad[1])
+
+            # Test analytical against numerical gradients
+            num_grad_y = np.gradient(seg_lens, y_pos)
+            assert np.allclose(num_grad_y, seg_lens_grad_y, atol=test_eps)
+
+        return
+# </Test polyline: Segment Length>
 # #############################################################################
