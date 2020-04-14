@@ -50,14 +50,14 @@ class Polyline(object):
         """
         # Call dist to segment for each segment, then filter results
         proj_vecs, dists, proj_to = [], [], []
-        for seg_idx in range(len(self._segment_lengths)):
+        for seg_idx in range(self.nsegments):
             _pv, _d, _pt = self._get_dist_to_segment(pt, seg_idx)
             proj_vecs.append(_pv)
             dists.append(_d)
-            # Shift IDs to global indices, segments start at -1, -2, ..., -(n-1)
+            # Shift IDs to global indices
             m = _pt < 0
-            _pt[m] = _pt[m] * (seg_idx + 1)
-            _pt[~m] = _pt[~m] + seg_idx
+            _pt[m] = _pt[m] * (seg_idx + 1)  # segments: -1, -2, ..., -nsegs
+            _pt[~m] = _pt[~m] + seg_idx  # Vertices: 0, 1, ..., nverts - 1
             proj_to.append(_pt)
 
         # Argmin for all segments is closest to whole curve
@@ -71,10 +71,11 @@ class Polyline(object):
 
         return proj_vecs, dists, proj_to
 
-    def get_angle_at_vertex(self, idx):
+    def get_cos_angle_at_vertex(self, idx):
         """
-        Returns the angle between segment (v_(i-1), v_i) and (v_i, v_(iü1) in
-        radians. idx must be in [1, nvertices - 1].
+        Returns cos(angle) between segment (v_(i-1), v_i) and (v_i, v_(i+1).
+        idx must be in [1, nvertices - 1] and the gradient in (x, y) direction
+        for the given vertex coordinates.
         """
         try:
             idx + 1
@@ -85,11 +86,35 @@ class Polyline(object):
         if idx < 1 or idx > self.nsegments:
             raise ValueError("idx must be in (1, nvertices)")
 
-        v0 = self._vertices[idx - 1] - self._vertices[idx]
-        v1 = self._vertices[idx] - self._vertices[idx + 1]
-        v0 = v0 / np.linalg.norm(v0)
-        v1 = v1 / np.linalg.norm(v1)
-        return np.pi - np.arccos(np.dot(v0, v1))
+        v0 = -self._vertices[idx - 1] + self._vertices[idx]  # Segment (i-1, i)
+        v1 = -self._vertices[idx] + self._vertices[idx + 1]  # Segment (i, i+1)
+        normv0, normv1 = np.linalg.norm(v0), np.linalg.norm(v1)
+        if np.isclose(normv1, 0.) or np.isclose(normv1, 0.):
+            return 0, 0
+
+        cos_angle = np.dot(v0, v1) / normv0 / normv1
+
+        # Precomputed analytic gradient: [d/dx cos_angle, d/dy cos_angle]
+        grad_x = ((v1[0] - v0[0]) / normv0 / normv1 +
+                  cos_angle * (v1[0] / normv1**2 - v0[0] / normv0**2))
+        grad_y = ((v1[1] - v0[1]) / normv0 / normv1 +
+                  cos_angle * (v1[1] / normv1**2 - v0[1] / normv0**2))
+
+        # pi - ang because straight line with 2 vertices has angle 180°
+        # -> cos(pi - ang) = cos(pi - arccos(x)) = -cos(arccos(x)) = -x
+        return -cos_angle, np.array([-grad_x, -grad_y])
+
+    def get_angle_at_vertex(self, idx):
+        """
+        Returns the angle between segment (v_(i-1), v_i) and (v_i, v_(i+1) in
+        radians. idx must be in [1, nvertices - 1].
+        """
+        cos_angle, cos_angle_grad = self.get_cos_angle_at_vertex(idx)
+        # Apply chain rule to arccos(cos_angle) gradient
+        angle = np.arccos(cos_angle)
+        # d/dx arccos(cos_angle(x)) = -1/sqrt(1-cos_angle) * d/dx(cos_angle)
+        angle_grad = -1. / (np.sqrt(1. - cos_angle)) * cos_angle_grad
+        return angle, angle_grad
 
     def append_vertex(self, v):
         """ Append vertices v to the end of the polyline """
@@ -219,6 +244,17 @@ class Polyline(object):
         """ Translates the whole line by shifting each vertex by trans_vec """
         self._vertices = self._vertices + np.atleast_2d(trans_vec).reshape(1, 2)
 
+    def get_vertex(self, idx):
+        return self._vertices[idx]
+
+    def get_segement_length(self, idx):
+        return self._segment_lengths[idx]
+
+    def get_segement_length_grad(self, idx):
+        # Todo: Calc gradient [dx, dy] for segment length (idx, idx + 1) with
+        #       respect to coordinates x, y of vertex idx
+        return
+
     def clear(self):
         self._clear_vertices()
         self._clear_segment_lengths()
@@ -288,10 +324,12 @@ class Polyline(object):
 
     @property
     def vertices(self):
+        """ Returns a copy of the internal vertex array """
         return self._vertices.copy()
 
     @property
     def segment_lengths(self):
+        """ Returns a copy of the internal segment length array """
         return self._segment_lengths.copy()
 
     @property
