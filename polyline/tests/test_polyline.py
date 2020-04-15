@@ -17,6 +17,8 @@ def test_norm_helper():
     assert 2 == approx(norm(2, -1, 0, -1))
     assert sqrt(2) == approx(norm(1, 1, 2, 2))
 
+    return
+
 
 # #############################################################################
 # <Test polyline: Constructor>
@@ -29,6 +31,8 @@ class TestPolylineConstructor():
         assert pl.nvertices == len(pl.vertices) == 0
         assert len(pl.segment_lengths) == pl.nsegments == 0
 
+        return
+
     def test_constructor_one_vertex(self):
         v = [[1, 2]]
         pl = Polyline(v)
@@ -38,6 +42,8 @@ class TestPolylineConstructor():
 
         assert pl.vertices[0, 0] == v[0][0]
         assert pl.vertices[0, 1] == v[0][1]
+
+        return
 
     def test_constructor_two_vertices(self):
         v = [[1, 2], [3, 4]]
@@ -53,6 +59,8 @@ class TestPolylineConstructor():
         assert pl.segment_lengths[0] == approx(
             norm(v[0][0], v[0][1], v[1][0], v[1][1]))
 
+        return
+
     def test_constructor_many_vertices(self):
         v = [[1, 2], [3, 4], [4, 5], [7, 8], [9, 10]]
         pl = Polyline(v)
@@ -67,6 +75,8 @@ class TestPolylineConstructor():
             if i < len(v) - 1:
                 assert pl.segment_lengths[i] == approx(
                     norm(vi[0], vi[1], v[i + 1][0], v[i + 1][1]))
+
+        return
 # </Test polyline: Constructor>
 # #############################################################################
 
@@ -81,6 +91,8 @@ class TestPolylineAppendVertices():
         with raises(ValueError):
             pl.append_vertex(v)
 
+        return
+
     def test_append_one_vertex(self):
         pl = Polyline()
         v = [[1, 2]]
@@ -91,6 +103,8 @@ class TestPolylineAppendVertices():
 
         assert pl.vertices[0, 0] == v[0][0]
         assert pl.vertices[0, 1] == v[0][1]
+
+        return
 
     def test_append_two_vertices(self):
         pl = Polyline()
@@ -107,6 +121,8 @@ class TestPolylineAppendVertices():
         assert pl.segment_lengths[0] == approx(
             norm(v[0][0], v[0][1], v[1][0], v[1][1]))
 
+        return
+
     def test_append_many_vertices(self):
         pl = Polyline()
         v = [[1, 2], [3, 4], [4, 5], [7, 8], [9, 10]]
@@ -122,6 +138,8 @@ class TestPolylineAppendVertices():
             if i < len(v) - 1:
                 assert pl.segment_lengths[i] == approx(
                     norm(vi[0], vi[1], v[i + 1][0], v[i + 1][1]))
+
+        return
 # </Test polyline: Append vertices>
 # #############################################################################
 
@@ -141,6 +159,8 @@ class TestPolylineInsertVertices():
         assert pl.vertices[0, 0] == v[0]
         assert pl.vertices[0, 1] == v[1]
 
+        return
+
     def test_insert_in_empty(self):
         pl = Polyline()
         v = [[1, 2]]
@@ -156,6 +176,8 @@ class TestPolylineInsertVertices():
 
         assert pl.vertices[0, 0] == v[0][0]
         assert pl.vertices[0, 1] == v[0][1]
+
+        return
 
     def test_insert_in_len_one_polyline(self):
         v = [[1, 2]]
@@ -173,6 +195,8 @@ class TestPolylineInsertVertices():
             assert pl.vertices[i, 1] == v_ins[0][1]
         assert pl.vertices[1, 0] == v[0][0]
         assert pl.vertices[1, 1] == v[0][1]
+
+        return
 
     def test_insert_multiple_random(self):
         v = [[1, 2], [3, 4], [5, 6], [7, 8]]
@@ -195,6 +219,8 @@ class TestPolylineInsertVertices():
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
+        return
+
     def test_insert_between(self):
         v = [[1, 0], [1, 1]]
         pl = Polyline(v)
@@ -211,6 +237,8 @@ class TestPolylineInsertVertices():
             if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        return
 
     def test_insert_between_scale_0(self):
         v = [[1, 0], [1, 1]]
@@ -229,6 +257,8 @@ class TestPolylineInsertVertices():
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
+        return
+
     def test_insert_between_scale_1(self):
         v = [[1, 0], [1, 1]]
         pl = Polyline(v)
@@ -245,6 +275,8 @@ class TestPolylineInsertVertices():
             if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        return
 # </Test polyline: Insert vertices>
 # #############################################################################
 
@@ -268,6 +300,8 @@ class TestPolylineRemoveVertex():
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
+        return
+
     def test_remove_vertex_end(self):
         v = [[1, 3], [3, 5], [6, 2], [2, 2]]
         pl = Polyline(v)
@@ -283,6 +317,8 @@ class TestPolylineRemoveVertex():
             if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        return
 
     def test_remove_vertex_middle(self):
         v = [[1, 3], [3, 5], [6, 2], [2, 2]]
@@ -302,6 +338,8 @@ class TestPolylineRemoveVertex():
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
+        return
+
     def test_remove_vertex_middle_2(self):
         # Same as above, but more than two leftover vertices
         v = [[1, 3], [3, 5], [6, 2], [2, 2], [3, 3], [4, 4]]
@@ -320,6 +358,8 @@ class TestPolylineRemoveVertex():
             if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        return
 # </Test polyline: Remove vertex>
 # #############################################################################
 
@@ -361,6 +401,8 @@ class TestPolylineReplaceVertex():
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
+        return
+
     def test_replace_vertex_beginning(self):
         v = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
         pl = Polyline(v)
@@ -377,6 +419,8 @@ class TestPolylineReplaceVertex():
             if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        return
 
     def test_replace_vertex_end(self):
         v = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
@@ -395,6 +439,8 @@ class TestPolylineReplaceVertex():
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
 
+        return
+
     def test_replace_vertex_middle(self):
         v = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
         pl = Polyline(v)
@@ -411,6 +457,8 @@ class TestPolylineReplaceVertex():
             if i < pl.nsegments:
                 assert pl.segment_lengths[i] == approx(norm(
                     vi[0], vi[1], v_expected[i + 1][0], v_expected[i + 1][1]))
+
+        return
 # </Test polyline: Replace vertex>
 # #############################################################################
 
@@ -426,7 +474,7 @@ class TestPolylineDistance():
         # calculated by hand apriori
         pts = [[1, 2], [1.5, 5.5], [3, 6], [3.5, 3.5],
                [5.5, 3.5], [4, 1], [2, 2.5]]
-        proj_vecs, dists, proj_to = pl.get_dist_to_line(pts)
+        dists, dists_grad, proj_to, proj_vecs = pl.get_dist_to_line(pts)
 
         # Should show from pt to closest part of the polyline
         proj_vecs_exp = [[0, 1], [1, -1], [0, -1], [0.5, 0.5],
@@ -442,6 +490,49 @@ class TestPolylineDistance():
             assert proj_vecs[i, 1] == approx(pvexp[1])
             assert dists[i] == approx(dexp)
             assert proj_to[i] == ptexp
+
+        return
+
+    def test_distance_grad(self):
+        # Move pts along simple polyline and compare gradients.
+        # Points are a bit tunes, because at discontinuous points, the numerical
+        # gradient jumps to far for the tested precision, although the plots are
+        # perfectly ok
+        pl = Polyline([[0, 0], [1, 0.8], [1.1, 1.9]])
+        test_eps = 1e-2  # Max allowed deviation, chose suitable for num grad
+        npts = 1000
+
+        # Test x gradient
+        ys = [-1, 2]
+        x = np.linspace(-1, 2, npts)
+
+        for yi in ys:
+            y = yi + np.zeros_like(x)
+            pts = np.vstack((x, y)).T
+
+            dists, dists_grad, _, proj_vecs = pl.get_dist_to_line(pts)
+
+            # Directional gradient along x
+            num_grad = np.gradient(dists, x)
+            grad = np.dot(dists_grad, [1, 0])
+            assert np.allclose(num_grad, grad, atol=test_eps)
+
+        # Test y gradient
+        xs = [-1, 2]
+        y = np.linspace(-1, 1.5, npts)
+
+        for xi in xs:
+            x = xi + np.zeros_like(y)
+            pts = np.vstack((x, y)).T
+
+            dists, dists_grad, _, proj_vecs = pl.get_dist_to_line(pts)
+
+            # Directional gradient along x
+            num_grad = np.gradient(dists, y)
+            grad = np.dot(dists_grad, [0, 1])
+            assert np.allclose(num_grad, grad, atol=test_eps)
+
+        return
 # </Test polyline: Distance>
 # #############################################################################
 
@@ -460,6 +551,8 @@ class TestPolylineAngle():
 
         for ang, ang_exp in zip(angles, angles_exp):
             assert ang == approx(ang_exp, abs=1e-5)
+
+        return
 
     def test_angle_gradient_dx(self):
         # Middle index is moved on a fine grid to test analytical dx components
@@ -566,7 +659,7 @@ class TestPolylineSegmentLength():
             for xi in x_pos:
                 pl.replace_vertex(idx, [xi, yi])
                 sl = pl.get_segment_length(0)
-                sl_grad = pl.get_segment_length_grad(0, side="first")
+                sl_grad = pl.get_segment_length_grad(0, which="first")
                 seg_lens.append(sl)
                 seg_lens_grad_x.append(sl_grad[0])
 
@@ -584,7 +677,7 @@ class TestPolylineSegmentLength():
             for yi in y_pos:
                 pl.replace_vertex(idx, [xi, yi])
                 sl = pl.get_segment_length(0)
-                sl_grad = pl.get_segment_length_grad(0, side="first")
+                sl_grad = pl.get_segment_length_grad(0, which="first")
                 seg_lens.append(sl)
                 seg_lens_grad_y.append(sl_grad[1])
 
@@ -608,7 +701,7 @@ class TestPolylineSegmentLength():
             for xi in x_pos:
                 pl.replace_vertex(idx, [xi, yi])
                 sl = pl.get_segment_length(0)
-                sl_grad = pl.get_segment_length_grad(0, side="last")
+                sl_grad = pl.get_segment_length_grad(0, which="last")
                 seg_lens.append(sl)
                 seg_lens_grad_x.append(sl_grad[0])
 
@@ -626,7 +719,7 @@ class TestPolylineSegmentLength():
             for yi in y_pos:
                 pl.replace_vertex(idx, [xi, yi])
                 sl = pl.get_segment_length(0)
-                sl_grad = pl.get_segment_length_grad(0, side="last")
+                sl_grad = pl.get_segment_length_grad(0, which="last")
                 seg_lens.append(sl)
                 seg_lens_grad_y.append(sl_grad[1])
 
