@@ -66,8 +66,8 @@ class Polyline(object):
         for seg_idx in range(self.nsegments):
             _d, _dg, _pt, _pv = self._get_dist_to_segment(pts, seg_idx)
             dists.append(_d)  # shape (nsegments, npts)
-            dists_grad.append(_dg)  # shape (nsegments, npts,) + (2,) or (2, 2)
-            proj_vecs.append(_pv)  # shape (nsegments, npts, 2)
+            dists_grad.append(_dg)  # shape (nsegments, npts, 2, 2{x,y})
+            proj_vecs.append(_pv)  # shape (nsegments, npts, 2{x,y})
             # Shift local segment projection IDs to global indices
             m = _pt < 0
             _pt[m] = _pt[m] * (seg_idx + 1)  # segments: -1, -2, ..., -nsegs
@@ -75,17 +75,18 @@ class Polyline(object):
             proj_to.append(_pt)  # shape (nsegments, npts)
 
         # Argmin over all segments is closest distance from point to whole curve
-        idx = np.argmin(dists, axis=0)  # For each points, closest segment idx
+        # Closest segment idx for each point, shape (npts)
+        idx = np.argmin(dists, axis=0)
         # Bring in correct shape to broadcast argmin indices for all points
         dists = np.asarray(dists).T  # shape (npts, nsegments)
+        dists_grad = np.swapaxes(dists_grad, 0, 1)  # (npts, nsegs, 2, 2{x,y})
         proj_to = np.asarray(proj_to).T  # shape (npts, nsegments)
-        proj_vecs = np.swapaxes(proj_vecs, 0, 1)  # shape (npts, nsegments, 2)
-        # Put proper distances, etc. in output
-        dists = np.asarray([di[i] for di, i in zip(dists, idx)])
-        # Index segment first, then point
-        dists_grad = [dists_grad[i][j] for j, i in enumerate(idx)]
-        proj_to = np.asarray([pti[i] for pti, i in zip(proj_to, idx)])
-        proj_vecs = np.asarray([pvi[i] for pvi, i in zip(proj_vecs, idx)])
+        proj_vecs = np.swapaxes(proj_vecs, 0, 1)  # shape (npts, nsegs, 2{x,y})
+        # Put to output, avoids hefty quadtratic numpy broadcasting
+        dists = np.asarray([di[i] for i, di in zip(idx, dists)])
+        dists_grad = np.asanyarray([dgi[i] for i, dgi in zip(idx, dists_grad)])
+        proj_to = np.asarray([pti[i] for i, pti in zip(idx, proj_to)])
+        proj_vecs = np.asarray([pvi[i] for i, pvi in zip(idx, proj_vecs)])
 
         return dists, dists_grad, proj_to, proj_vecs
 
@@ -307,8 +308,10 @@ class Polyline(object):
         entity (on segment or vertex) and not continous at the region borders.
         For each point, two gradients are returned, with respect to variation of
         the first and second vertex of the segment respectively.
-        If a point projects onto one of the vertices, the other gradient is
-        zero, because is doesn't affect the distance at all.
+        If a point projects onto one of the vertices, the second gradient is set
+        to zero, because the other vertex doesn't affect the distance at all and
+        the association from projection ID to gradient must be unambiguous.
+        Gradients for points with distance 0 are both set to zero.
 
         Returns: dists, dists_grad, proj_to, proj_vecs
         """
@@ -324,7 +327,9 @@ class Polyline(object):
             # Both vertices are almost equal, return distance pts to v0. All
             # points project to v0 so gradients are the normalized projection
             # vectors, which are simply the connection vectors (pt -> v0) here
-            return (norm_dpt_v0, -dpt_v0 / norm_dpt_v0,
+            dists_grad = np.zeros((len(pts), 2, 2), dtype=np.float)
+            dists_grad[:, :, 0] = -dpt_v0 / norm_dpt_v0
+            return (norm_dpt_v0, dists_grad,
                     np.zeros(len(dpt_v0), dtype=int), dpt_v0)
 
         # Project dpt_v0 on line (v0, v1)
@@ -350,48 +355,41 @@ class Polyline(object):
         # Get distances
         dists = np.linalg.norm(proj_vecs, axis=1)
 
-        # Get distance gradients [dL/dx, dL/dy].
-        # For points closest to v0 or v1, only a single gradient for variation
-        # of the corresponding vertex is returned.
-        # For points closest to the segment, a tuple of two gradients (dv0, dv1)
-        # returned, with respect to variation of the first and second vertex
-        # respectively.
-        # Gradients for points directly on the segment are set to zero.
-        dists_grad = []
-        for i in range(len(pts)):
-            # Point projects on v0 or v1 -> single gradient
-            # Gradient is the normalized connection vector (pt -> vi)
-            if m0[i]:
-                if dists[i] > 0:
-                    dists_grad.append(np.ravel(-dpt_v0[[i]] / norm_dpt_v0[i]))
-                else:
-                    dists_grad.append(np.array([0., 0.]))
-            elif m1[i]:
-                if dists[i] > 0:
-                    dpt_v1 = v1 - pts[[i]]
-                    dists_grad.append(np.ravel(
-                        dpt_v1 / np.linalg.norm(dpt_v1, axis=1)))
-                else:
-                    dists_grad.append(np.array([0., 0.]))
-            else:  # Point projects on segment (v0, v1) -> two gradients
-                if dists[i] > 0:
-                    grad_v0 = [
-                        -dpt_v0[i, j] / norm_dproj * dproj[0, j] +
-                        dproj[0, 1 if j == 0 else 1]**2 +
-                        proj_lens[i] * 2. * dproj[0, j]**2 / norm_dproj -
-                        proj_lens[i] / norm_dproj
-                        for j in [0, 1]
-                    ]
-                    grad_v1 = [
-                        dpt_v0[i, j] / norm_dproj * dproj[0, j] -
-                        proj_lens[i] * 2. * dproj[0, j]**2 / norm_dproj +
-                        proj_lens[i] / norm_dproj
-                        for j in [0, 1]
-                    ]
-                    dists_grad.append([
-                        np.ravel(grad_v0), np.ravel(grad_v1)])
-                else:
-                    dists_grad.append([np.array([0., 0.]), np.array([0., 0.])])
+        # Get distance gradients [dL/dx, dL/dy]
+        # shape (npts, ngradients per point, (x, y)) -> (npts, 2, 2)
+        dists_grad = np.empty((len(dists), 2, 2), dtype=np.float)
+        valid = dists > 0
+        # Points projecting on v0
+        _m = np.logical_and(valid, m0)
+        if np.any(_m):
+            _grad = np.zeros((np.sum(_m), 2, 2))
+            _grad[:, 0] = -dpt_v0[_m] / norm_dpt_v0[_m]
+            dists_grad[_m] = _grad
+
+        # Points projecting on v1
+        _m = np.logical_and(valid, m1)
+        if np.any(_m):
+            dpt_v1 = v1 - pts[_m]
+            _grad = np.zeros((np.sum(_m), 2, 2))
+            _grad[:, 0] = (
+                dpt_v1 / np.linalg.norm(dpt_v1, axis=1).reshape(len(dpt_v1), 1))
+            dists_grad[_m] = _grad
+
+        # Points projecting on segment (v0, v1)
+        mseg = np.logical_and(~m0, ~m1)
+        _m = np.logical_and(valid, mseg)
+        if np.any(_m):
+            _grad = np.empty((np.sum(_m), 2, 2))
+            _grad[:, 0] = (
+                1. - dproj**2 -
+                dpt_v0[_m] / norm_dproj * dproj +
+                proj_lens[_m] * 2 * dproj**2 / norm_dproj -
+                proj_lens[_m] / norm_dproj)
+            _grad[:, 1] = (
+                dpt_v0[_m] / norm_dproj * dproj -
+                proj_lens[_m] * 2 * dproj**2 / norm_dproj +
+                proj_lens[_m] / norm_dproj)
+            dists_grad[_m] = _grad
 
         return dists, dists_grad, proj_to, proj_vecs
 
