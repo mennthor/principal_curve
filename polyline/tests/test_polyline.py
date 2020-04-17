@@ -474,7 +474,7 @@ class TestPolylineDistance():
         # calculated by hand apriori
         pts = [[1, 2], [1.5, 5.5], [3, 6], [3.5, 3.5],
                [5.5, 3.5], [4, 1], [2, 2.5]]
-        dists, dists_grad, proj_to, proj_vecs = pl.get_dist_to_line(pts)
+        dists, _, proj_to, proj_vecs = pl.get_dist_to_line(pts)
 
         # Should show from pt to closest part of the polyline
         proj_vecs_exp = [[0, 1], [1, -1], [0, -1], [0.5, 0.5],
@@ -493,7 +493,9 @@ class TestPolylineDistance():
 
         return
 
-    def test_distance_grad(self):
+    def test_distance_point_grad(self):
+        # Test gradient with respect to each projected point, leaving the
+        # polyline fixed.
         # Move pts along simple polyline and compare gradients.
         # Points are a bit tunes, because at discontinuous points, the numerical
         # gradient jumps to far for the tested precision, although the plots are
@@ -510,11 +512,15 @@ class TestPolylineDistance():
             y = yi + np.zeros_like(x)
             pts = np.vstack((x, y)).T
 
-            dists, dists_grad, _, proj_vecs = pl.get_dist_to_line(pts)
+            dists, _, _, proj_vecs = pl.get_dist_to_line(pts)
+
+            # Gradients are simply the normalized negative projection vectors
+            _norm = np.linalg.norm(proj_vecs, axis=1).reshape(len(proj_vecs), 1)
+            gradients = -proj_vecs / _norm
 
             # Directional gradient along x
             num_grad = np.gradient(dists, x)
-            grad = np.dot(dists_grad, [1, 0])
+            grad = np.dot(gradients, [1, 0])
             assert np.allclose(num_grad, grad, atol=test_eps)
 
         # Test y gradient
@@ -527,11 +533,20 @@ class TestPolylineDistance():
 
             dists, dists_grad, _, proj_vecs = pl.get_dist_to_line(pts)
 
+            # Gradients are simply the normalized negative projection vectors
+            _norm = np.linalg.norm(proj_vecs, axis=1).reshape(len(proj_vecs), 1)
+            gradients = -proj_vecs / _norm
+
             # Directional gradient along x
             num_grad = np.gradient(dists, y)
-            grad = np.dot(dists_grad, [0, 1])
+            grad = np.dot(gradients, [0, 1])
             assert np.allclose(num_grad, grad, atol=test_eps)
 
+        return
+
+    def test_distance_vertex_grad(self):
+        # Here the data is held fixed and the vertex is moved and its gradient
+        # with repsect to the vertex location is checked.
         return
 # </Test polyline: Distance>
 # #############################################################################
