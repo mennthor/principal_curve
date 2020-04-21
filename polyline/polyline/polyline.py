@@ -333,9 +333,9 @@ class Polyline(object):
                     np.zeros(len(dpt_v0), dtype=int), dpt_v0)
 
         # Project dpt_v0 on line (v0, v1)
-        dproj = dproj / norm_dproj
-        proj_lens = np.dot(dpt_v0, dproj.T)
-        tangent_vecs = proj_lens * dproj
+        dproj_norm = dproj / norm_dproj
+        proj_lens = np.dot(dpt_v0, dproj_norm.T)
+        tangent_vecs = proj_lens * dproj_norm
 
         # If projected length is not in [0, norm_dproj] it is outside the line
         # element and the distance to v0 (<0) or v1 (>norm_dproj) is returned
@@ -356,38 +356,27 @@ class Polyline(object):
         dists = np.linalg.norm(proj_vecs, axis=1)
 
         # Get distance gradients [dL/dx, dL/dy]
-        # shape (npts, ngradients per point, (x, y)) -> (npts, 2, 2)
-        dists_grad = np.empty((len(dists), 2, 2), dtype=np.float)
         valid = dists > 0
-        # Points projecting on v0
-        _m = np.logical_and(valid, m0)
-        if np.any(_m):
-            _grad = np.zeros((np.sum(_m), 2, 2))
-            _grad[:, 0] = -dpt_v0[_m] / norm_dpt_v0[_m]
-            dists_grad[_m] = _grad
-
-        # Points projecting on v1
-        _m = np.logical_and(valid, m1)
-        if np.any(_m):
-            dpt_v1 = v1 - pts[_m]
-            _grad = np.zeros((np.sum(_m), 2, 2))
-            _grad[:, 0] = (
-                dpt_v1 / np.linalg.norm(dpt_v1, axis=1).reshape(len(dpt_v1), 1))
-            dists_grad[_m] = _grad
+        proj_vecs_norm = np.zeros_like(proj_vecs)
+        proj_vecs_norm = proj_vecs[valid] / dists.reshape(len(dists[valid]), 1)
+        # shape (npts, ngradients per point, (x, y)) -> (npts, 2, 2)
+        dists_grad = np.zeros((len(dists), 2, 2), dtype=np.float)
+        # Points projecting on v0 or v1 have the normed proj vecs as gradients
+        dists_grad[:, 0] = proj_vecs_norm
 
         # Points projecting on segment (v0, v1)
         mseg = np.logical_and(~m0, ~m1)
         _m = np.logical_and(valid, mseg)
         if np.any(_m):
             _grad = np.empty((np.sum(_m), 2, 2))
-            _grad[:, 0] = (
-                1. - dproj**2 -
-                dpt_v0[_m] / norm_dproj * dproj +
-                proj_lens[_m] * 2 * dproj**2 / norm_dproj -
+            _grad[:, 0] = proj_vecs_norm[_m] * (
+                1. - dproj_norm**2 -
+                dpt_v0[_m] / norm_dproj * dproj_norm +
+                proj_lens[_m] * 2 * dproj_norm**2 / norm_dproj -
                 proj_lens[_m] / norm_dproj)
-            _grad[:, 1] = (
-                dpt_v0[_m] / norm_dproj * dproj -
-                proj_lens[_m] * 2 * dproj**2 / norm_dproj +
+            _grad[:, 1] = proj_vecs_norm[_m] * (
+                dpt_v0[_m] / norm_dproj * dproj_norm -
+                proj_lens[_m] * 2 * dproj_norm**2 / norm_dproj +
                 proj_lens[_m] / norm_dproj)
             dists_grad[_m] = _grad
 
